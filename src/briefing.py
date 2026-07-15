@@ -48,7 +48,7 @@ def build_footer(today: str) -> str:
     """Small footer with the dashboard link."""
     return (
         f'<p style="margin-top:24px;font-size:13px;color:#888">'
-        f'Hydration + meditation are pulled from Google Fit automatically. '
+        f'Hydration + meditation are pulled automatically from the Health Connect export sheet. '
         f'<a href="{config.DASHBOARD_URL}" style="color:#888">Full dashboard</a>'
         f'</p>'
     )

@@ -16,8 +16,8 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      HEALTHSTACK_SHEET_ID: ${{ secrets.HEALTHSTACK_SHEET_ID }}
       GOOGLE_OAUTH_TOKEN: ${{ secrets.GOOGLE_OAUTH_TOKEN }}
-      GOOGLE_OAUTH_CLIENT: ${{ secrets.GOOGLE_OAUTH_CLIENT }}
       HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       GMAIL_TO: ${{ secrets.GMAIL_TO }}

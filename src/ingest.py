@@ -1,29 +1,33 @@
 """Ingest yesterday's data from all sources into Supabase.
 
 Idempotent by design - safe to re-run any time.
+
+Data sources:
+  * Health Connect export sheet (steps, sleep, weight, hydration, meditation,
+    nutrition, cardio/walk sessions). See src/sources/google_sheet.py.
+  * Hevy API (strength workouts + per-set lifts). See src/sources/hevy.py.
 """
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 import sys
 
 from . import db
-from .sources import google_fit, hevy
+from .sources import google_sheet, hevy
 
 
 def yesterday_iso(days_back: int = 1) -> str:
     return (date.today() - timedelta(days=days_back)).isoformat()
 
 
-def ingest_google_fit(day: str) -> dict:
-    print(f"[fit] pulling {day}")
-    weight = google_fit.get_weight_lb(day)
-    steps = google_fit.get_steps(day)
-    sleep = google_fit.get_sleep_hours(day)
-    hydration_ml = google_fit.get_hydration_ml(day)
-    meditation_min = google_fit.get_meditation_min(day)
-    nutrition = google_fit.get_nutrition(day)
-    sessions = google_fit.get_workout_sessions(day)
+def ingest_sheet(day: str) -> dict:
+    print(f"[sheet] pulling {day}")
+    weight = google_sheet.get_weight_lb(day)
+    steps = google_sheet.get_steps(day)
+    sleep = google_sheet.get_sleep_hours(day)
+    hydration_ml = google_sheet.get_hydration_ml(day)
+    meditation_min = google_sheet.get_meditation_min(day)
+    nutrition = google_sheet.get_nutrition(day)
+    sessions = google_sheet.get_workout_sessions(day)
 
-    # Upsert daily row
     db.upsert_daily({
         "date": day,
         "weight_lb": weight,
@@ -36,7 +40,6 @@ def ingest_google_fit(day: str) -> dict:
         "carbs_g": nutrition.get("carbs_g"),
     })
 
-    # Upsert workout sessions
     for s in sessions:
         s["date"] = day
         db.upsert_workout(s)
@@ -62,7 +65,6 @@ def ingest_hevy(days_back: int = 3) -> dict:
         row, lift_rows = hevy.normalize_workout(w)
         workout_id = db.upsert_workout(row)
         if workout_id and lift_rows:
-            # Attach workout_id and reset any prior lift rows for this workout
             db.delete_lifts_for_workout(workout_id)
             for lr in lift_rows:
                 lr["workout_id"] = workout_id
@@ -77,7 +79,6 @@ def refresh_lift_prs() -> None:
     prs = db.get_lift_prs()
     for pr in prs:
         exercise = pr["exercise"]
-        # Simple substring match against the exercise name we store from Hevy
         resp = (
             db.db().table("lifts")
             .select("weight_lb,reps,date")
@@ -95,10 +96,10 @@ def refresh_lift_prs() -> None:
 def main() -> None:
     day = sys.argv[1] if len(sys.argv) > 1 else yesterday_iso()
     print(f"=== ingest for {day} ===")
-    fit_summary = ingest_google_fit(day)
+    sheet_summary = ingest_sheet(day)
     hevy_summary = ingest_hevy(days_back=3)
     refresh_lift_prs()
-    print(f"fit: {fit_summary}")
+    print(f"sheet: {sheet_summary}")
     print(f"hevy: {hevy_summary}")
 
 

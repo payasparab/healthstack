@@ -1,19 +1,20 @@
-"""One-time OAuth flow. Run this on your laptop before deploying.
+"""One-time OAuth flow for Gmail. Run this on your laptop before deploying.
 
-Prereqs: `credentials.json` in the repo root (downloaded from Google Cloud Console).
-Output: `token.json` in the repo root. Copy its contents to the GH secret GOOGLE_OAUTH_TOKEN.
+Data ingestion no longer needs OAuth — steps/sleep/weight/etc. come from the
+Health Connect export Google Sheet, which just has to be shared as
+"Anyone with the link can view". The only remaining Google OAuth is for
+sending the daily briefing email via Gmail.
+
+Prereqs: `credentials.json` in the repo root (OAuth client JSON downloaded
+from Google Cloud Console).
+Output:  `token.json` in the repo root. Paste its contents into the GH
+secret GOOGLE_OAUTH_TOKEN.
 """
-import json
 from pathlib import Path
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-SCOPES = [
-    "https://www.googleapis.com/auth/fitness.activity.read",
-    "https://www.googleapis.com/auth/fitness.body.read",
-    "https://www.googleapis.com/auth/fitness.sleep.read",
-    "https://www.googleapis.com/auth/fitness.location.read",
-    "https://www.googleapis.com/auth/gmail.send",
-]
+SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
+
 
 def main():
     repo_root = Path(__file__).parent.parent
@@ -22,8 +23,8 @@ def main():
 
     if not creds_path.exists():
         raise SystemExit(
-            f"Missing {creds_path}. Download OAuth client JSON from Google Cloud Console "
-            f"and save it there."
+            f"Missing {creds_path}. Download the OAuth client JSON from "
+            f"Google Cloud Console and save it there."
         )
 
     flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), SCOPES)
@@ -33,8 +34,8 @@ def main():
     print(f"\nWrote {token_path}\n")
     print("Next steps:")
     print(f"  1. Copy the ENTIRE contents of {token_path} into GitHub secret GOOGLE_OAUTH_TOKEN")
-    print(f"  2. Copy the ENTIRE contents of {creds_path} into GitHub secret GOOGLE_OAUTH_CLIENT")
-    print(f"  3. NEVER commit either file. They are gitignored.")
+    print(f"  2. NEVER commit token.json or credentials.json.")
+
 
 if __name__ == "__main__":
     main()

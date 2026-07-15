@@ -1,15 +1,33 @@
-"""Send emails via Gmail API using the same OAuth creds as Fit."""
+"""Send emails via Gmail API using an OAuth refresh token in GOOGLE_OAUTH_TOKEN."""
 import base64
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-from .sources.google_fit import _creds
 from . import config
 
+SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
+
+
+def _creds() -> Credentials:
+    token_data = config.google_oauth_token_dict()
+    creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+    if not creds.valid:
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            raise RuntimeError(
+                "Gmail OAuth token is invalid and cannot be refreshed. "
+                "Re-run scripts/first_time_oauth.py."
+            )
+    return creds
+
+
 def send(subject: str, body_text: str, body_html: str | None = None) -> None:
-    creds = _creds()
-    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    service = build("gmail", "v1", credentials=_creds(), cache_discovery=False)
 
     if body_html:
         msg = MIMEMultipart("alternative")
