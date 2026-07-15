@@ -1,0 +1,53 @@
+name: daily
+
+on:
+  schedule:
+    # 06:05 America/Los_Angeles = 13:05 UTC (DST) / 14:05 UTC (standard)
+    # Using 14:05 UTC to cover both; adjust if you want strict local time.
+    - cron: '5 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to push docs/data.json back to the repo
+
+jobs:
+  ingest_brief_publish:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GOOGLE_OAUTH_TOKEN: ${{ secrets.GOOGLE_OAUTH_TOKEN }}
+      GOOGLE_OAUTH_CLIENT: ${{ secrets.GOOGLE_OAUTH_CLIENT }}
+      HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GMAIL_TO: ${{ secrets.GMAIL_TO }}
+      GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
+      TIMEZONE: America/Los_Angeles
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Ingest yesterday's data
+        run: python -m src.ingest
+
+      - name: Send briefing
+        run: python -m src.briefing daily
+
+      - name: Export dashboard data
+        run: python -m src.export_dashboard
+
+      - name: Commit dashboard data
+        run: |
+          git config user.name  "healthstack-bot"
+          git config user.email "healthstack-bot@users.noreply.github.com"
+          git add docs/data.json
+          if git diff --cached --quiet; then
+            echo "No dashboard changes"
+          else
+            git commit -m "dashboard: data for $(date -u +%Y-%m-%d)"
+            git push
+          fi

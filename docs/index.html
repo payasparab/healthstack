@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>healthstack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+<main class="page">
+  <header class="masthead">
+    <div class="masthead-left">
+      <span class="wordmark">healthstack</span>
+      <span class="meta" id="generated"></span>
+    </div>
+    <div class="masthead-right">
+      <span class="meta">week of</span>
+      <span class="numeric" id="week-start"></span>
+    </div>
+  </header>
+
+  <!-- SIGNATURE: 12-week weight rail -->
+  <section class="rail-section">
+    <div class="rail-header">
+      <span class="section-eyebrow">Weight schedule</span>
+      <span class="rail-status" id="rail-status"></span>
+    </div>
+    <div class="rail" id="rail"></div>
+    <div class="rail-legend">
+      <span class="legend-swatch legend-actual"></span> actual
+      <span class="legend-swatch legend-target"></span> scheduled
+    </div>
+  </section>
+
+  <!-- This week -->
+  <section class="grid-week">
+    <div class="stat">
+      <div class="stat-label">Current</div>
+      <div class="stat-value numeric" id="current-weight">—</div>
+      <div class="stat-unit">lb</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Target this week</div>
+      <div class="stat-value numeric" id="target-weight">—</div>
+      <div class="stat-unit">lb</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Delta</div>
+      <div class="stat-value numeric" id="delta">—</div>
+      <div class="stat-unit" id="delta-unit">lb</div>
+    </div>
+  </section>
+
+  <section class="grid-progress">
+    <div class="progress-row">
+      <div class="progress-label">Exercise</div>
+      <div class="progress-bar"><div class="progress-fill" id="bar-exercise"></div></div>
+      <div class="progress-count numeric" id="count-exercise">0/6</div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label">Runs</div>
+      <div class="progress-bar"><div class="progress-fill" id="bar-runs"></div></div>
+      <div class="progress-count numeric" id="count-runs">0/3</div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label">Mobility</div>
+      <div class="progress-bar"><div class="progress-fill" id="bar-mobility"></div></div>
+      <div class="progress-count numeric" id="count-mobility">0/30</div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label">Hydration</div>
+      <div class="progress-bar"><div class="progress-fill" id="bar-hydration"></div></div>
+      <div class="progress-count numeric" id="count-hydration">0/5</div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label">Meditation</div>
+      <div class="progress-bar"><div class="progress-fill" id="bar-meditation"></div></div>
+      <div class="progress-count numeric" id="count-meditation">0/5</div>
+    </div>
+  </section>
+
+  <!-- Nutrition (yesterday) -->
+  <section class="nutrition-section">
+    <div class="section-eyebrow">Nutrition — yesterday</div>
+    <div class="nutrition-grid">
+      <div class="nutrition-item">
+        <div class="nutrition-label">Calories</div>
+        <div class="nutrition-value numeric" id="nut-calories">—</div>
+        <div class="nutrition-target numeric" id="nut-calories-target">cap 2500</div>
+        <div class="nutrition-bar"><div class="nutrition-bar-fill" id="nut-calories-bar"></div></div>
+      </div>
+      <div class="nutrition-item">
+        <div class="nutrition-label">Protein</div>
+        <div class="nutrition-value numeric" id="nut-protein">—</div>
+        <div class="nutrition-target numeric" id="nut-protein-target">min 220g</div>
+        <div class="nutrition-bar"><div class="nutrition-bar-fill" id="nut-protein-bar"></div></div>
+      </div>
+      <div class="nutrition-item">
+        <div class="nutrition-label">Carbs</div>
+        <div class="nutrition-value numeric" id="nut-carbs">—</div>
+        <div class="nutrition-target numeric" id="nut-carbs-target">cap 50g</div>
+        <div class="nutrition-bar"><div class="nutrition-bar-fill" id="nut-carbs-bar"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Weight trend chart -->
+  <section class="chart-section">
+    <div class="section-eyebrow">Weight — actual vs scheduled</div>
+    <canvas id="weight-chart" height="240"></canvas>
+  </section>
+
+  <!-- Streaks -->
+  <section class="streaks">
+    <div class="streak">
+      <div class="streak-label">Hydration streak</div>
+      <div class="streak-value numeric" id="streak-hydration">0</div>
+      <div class="streak-unit">days</div>
+    </div>
+    <div class="streak">
+      <div class="streak-label">Meditation streak</div>
+      <div class="streak-value numeric" id="streak-meditation">0</div>
+      <div class="streak-unit">days</div>
+    </div>
+    <div class="streak">
+      <div class="streak-label">12k step streak</div>
+      <div class="streak-value numeric" id="streak-steps">0</div>
+      <div class="streak-unit">days</div>
+    </div>
+  </section>
+
+  <!-- Lift progression -->
+  <section class="lifts-section">
+    <div class="section-eyebrow">Target lifts</div>
+    <div class="lifts-grid" id="lifts-grid"></div>
+  </section>
+
+  <!-- Recent runs -->
+  <section class="runs-section">
+    <div class="section-eyebrow">Recent runs</div>
+    <table class="runs-table" id="runs-table">
+      <thead>
+        <tr><th>Date</th><th class="num">Distance</th><th class="num">Time</th><th class="num">Pace</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- Last briefing -->
+  <section class="briefing-section">
+    <details>
+      <summary class="section-eyebrow">Last briefing <span class="meta" id="briefing-date"></span></summary>
+      <div class="briefing-content" id="briefing-content"></div>
+    </details>
+  </section>
+
+  <footer class="footer">
+    <span class="meta">healthstack v1 · data via google fit + hevy · updates daily ~6am pt</span>
+  </footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

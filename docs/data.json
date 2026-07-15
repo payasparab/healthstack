@@ -1,0 +1,49 @@
+{
+  "generated_at": "2026-07-14",
+  "current_weight": null,
+  "current_weight_date": null,
+  "this_week": {
+    "week_start": "2026-07-12",
+    "exercise_days": 0,
+    "run_count": 0,
+    "run_km": 0,
+    "avg_pace": null,
+    "mobility_min": 0,
+    "hydration_days": 0,
+    "meditation_days": 0,
+    "steps_days": 0
+  },
+  "this_week_target": {"week_start": "2026-07-12", "target_lb": 280.0},
+  "daily": [],
+  "weekly": [],
+  "weight_schedule": [
+    {"week_start": "2026-07-12", "target_lb": 280.0},
+    {"week_start": "2026-07-19", "target_lb": 277.5},
+    {"week_start": "2026-07-26", "target_lb": 275.0},
+    {"week_start": "2026-08-02", "target_lb": 272.5},
+    {"week_start": "2026-08-09", "target_lb": 270.0},
+    {"week_start": "2026-08-16", "target_lb": 267.5},
+    {"week_start": "2026-08-23", "target_lb": 265.0},
+    {"week_start": "2026-08-30", "target_lb": 262.5},
+    {"week_start": "2026-09-06", "target_lb": 260.0},
+    {"week_start": "2026-09-13", "target_lb": 257.5},
+    {"week_start": "2026-09-20", "target_lb": 255.0},
+    {"week_start": "2026-09-27", "target_lb": 252.5}
+  ],
+  "target_lifts": {
+    "Bench Press": [], "Tricep Pushdown": [], "Concentration Curl": [],
+    "T-Bar Row": [], "Leg Press": [], "Hack Squat": []
+  },
+  "lift_prs": [
+    {"exercise": "Bench Press", "target_lb": 315, "current_best_lb": null},
+    {"exercise": "Tricep Pushdown", "target_lb": 130, "current_best_lb": null},
+    {"exercise": "Concentration Curl", "target_lb": 60, "current_best_lb": null},
+    {"exercise": "T-Bar Row", "target_lb": 315, "current_best_lb": null},
+    {"exercise": "Leg Press", "target_lb": 675, "current_best_lb": null},
+    {"exercise": "Hack Squat", "target_lb": 310, "current_best_lb": null}
+  ],
+  "recent_runs": [],
+  "streaks": {"hydration": 0, "meditation": 0, "steps": 0},
+  "targets": {"steps_daily": 12000, "hydration_days_per_week": 5, "meditation_days_per_week": 5},
+  "last_briefing": null
+}

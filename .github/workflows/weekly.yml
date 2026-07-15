@@ -1,0 +1,30 @@
+name: weekly
+
+on:
+  schedule:
+    # Sundays 07:00 America/Los_Angeles = 15:00 UTC (during DST)
+    - cron: '0 15 * * 0'
+  workflow_dispatch:
+
+jobs:
+  weekly_review:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      GOOGLE_OAUTH_TOKEN: ${{ secrets.GOOGLE_OAUTH_TOKEN }}
+      GOOGLE_OAUTH_CLIENT: ${{ secrets.GOOGLE_OAUTH_CLIENT }}
+      HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GMAIL_TO: ${{ secrets.GMAIL_TO }}
+      GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
+      TIMEZONE: America/Los_Angeles
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Send weekly review
+        run: python -m src.weekly_review
