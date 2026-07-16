@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       HEALTHSTACK_SHEET_ID: ${{ secrets.HEALTHSTACK_SHEET_ID }}
       HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}

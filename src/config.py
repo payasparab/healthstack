@@ -10,9 +10,12 @@ def _req(name: str, *fallbacks: str) -> str:
     raise RuntimeError(f"Missing required env var: {name}")
 
 
-# Supabase
+# Supabase — the ingest writes to protected tables, so we want the
+# service-role / secret key. Supabase renamed its keys in 2025: the old
+# SUPABASE_KEY (service_role) is now SUPABASE_SECRET_KEY. Accept both,
+# preferring the new name.
 SUPABASE_URL = _req("SUPABASE_URL")
-SUPABASE_KEY = _req("SUPABASE_KEY")
+SUPABASE_KEY = _req("SUPABASE_SECRET_KEY", "SUPABASE_KEY")
 
 # Health Connect export sheet — required. Accepts either the raw sheet id or a
 # full Google Sheets URL; we extract the id.

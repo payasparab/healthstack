@@ -61,7 +61,7 @@ Repo → Settings → Secrets and variables → Actions:
 | Name | Value |
 |---|---|
 | `SUPABASE_URL` | from step 1 |
-| `SUPABASE_KEY` | service_role key from step 1 |
+| `SUPABASE_SECRET_KEY` | secret key (formerly `service_role`) from step 1 |
 | `HEALTHSTACK_SHEET_ID` | sheet id (or full URL) from step 2 |
 | `SENDGRID_API_KEY` | Mail Send API key from step 3 |
 | `EMAIL_TO` | inbox that receives the briefing |
