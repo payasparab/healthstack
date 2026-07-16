@@ -7,8 +7,26 @@ The whole workbook is fetched once per process (four to five short HTTP GETs)
 and then queried in-memory. No Google API client, no OAuth — the sheet just
 has to be shared as "Anyone with the link can view".
 
-Public interface mirrors the old google_fit module so ingest.py can swap
-`from .sources import google_fit` for `google_sheet` with no other changes:
+Dedup strategy — the sheet contains overlapping rows for three reasons:
+
+  1. A source re-syncs the same daily row (identical columns end up in the
+     export twice).
+  2. Fitbit repeats the daily step / calorie totals on every workout-session
+     row, so a day with four workouts shows four rows with the same Steps.
+  3. Multiple sources report the same metric (Health Connect aggregator +
+     Fitbit both write daily step totals; user might run two hydration apps).
+
+To handle all three:
+  * `_load()` drops byte-identical duplicate rows.
+  * Per-source, we take the MAX for aggregate metrics (steps, hydration,
+    calories, protein, carbs) — max is idempotent under duplication and
+    picks the row that saw the most.
+  * Across sources, we then SUM for genuinely additive metrics (hydration,
+    nutrition) and MAX for shared aggregates (steps).
+  * Sleep sessions dedupe on (source, start, end); meditation sessions on
+    (source, start, name).
+
+Public interface mirrors the old google_fit module:
   get_steps, get_weight_lb, get_sleep_hours, get_hydration_ml,
   get_meditation_min, get_nutrition, get_workout_sessions
 """
@@ -17,7 +35,8 @@ from __future__ import annotations
 import csv
 import io
 import re
-from datetime import datetime, timedelta
+from collections import defaultdict
+from datetime import datetime
 from functools import lru_cache
 from urllib.parse import quote
 
@@ -57,7 +76,21 @@ def _fetch_tab(name: str) -> list[dict]:
     if not text.strip():
         return []
     reader = csv.DictReader(io.StringIO(text))
-    return [row for row in reader if any((v or "").strip() for v in row.values())]
+    rows = [row for row in reader if any((v or "").strip() for v in row.values())]
+    return _dedupe_identical(rows)
+
+
+def _dedupe_identical(rows: list[dict]) -> list[dict]:
+    """Drop byte-identical duplicate rows (all columns match)."""
+    seen: set[tuple] = set()
+    out: list[dict] = []
+    for r in rows:
+        key = tuple(sorted((k, (v or "").strip()) for k, v in r.items()))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(r)
+    return out
 
 
 @lru_cache(maxsize=None)
@@ -92,6 +125,21 @@ def _fnum(v) -> float | None:
         return None
 
 
+def _max_per_source(rows: list[dict], col: str) -> dict[str, float]:
+    """For each source, take the max value of `col`. Handles duplicate rows
+    from the same source (max is idempotent) and Fitbit's habit of repeating
+    daily totals across multiple session rows."""
+    out: dict[str, float] = {}
+    for r in rows:
+        src = (r.get("Source(s)") or "").strip()
+        v = _fnum(r.get(col))
+        if v is None:
+            continue
+        if v > out.get(src, float("-inf")):
+            out[src] = v
+    return out
+
+
 def _classify(name: str) -> str:
     n = (name or "").lower()
     if _MEDITATION_HINT.search(n):
@@ -124,46 +172,63 @@ def _source_hint(pkg: str, name: str) -> str:
 # ------------------------------------------------------------------ metrics
 
 def get_steps(day_iso: str) -> int | None:
-    """Highest step count on this date across sources (Health Connect + Fitbit
-    both write step totals; taking the max avoids double-counting and picks
-    the source that saw the most)."""
+    """Highest step count on this date across sources. Max is safe under
+    both (a) same source repeating a daily total across many rows and
+    (b) multiple sources each reporting an independent daily total."""
     rows = _rows_for_date(TAB_ACTIVITY, day_iso)
-    best = 0
-    for r in rows:
-        v = _fnum(r.get("Steps"))
-        if v is not None and v > best:
-            best = v
+    per_source = _max_per_source(rows, "Steps")
+    if not per_source:
+        return None
+    best = max(per_source.values())
     return int(best) if best > 0 else None
 
 
 def get_weight_lb(day_iso: str) -> float | None:
-    """Most recent weight reading on this date, converted to lb. Reads from
-    the Body tab; falls back to None if the tab or column is absent."""
+    """Most recent weight reading on this date, converted to lb. Dedupes
+    on (source, kg) so a re-synced identical reading doesn't affect
+    ordering; returns the last remaining value."""
     rows = _rows_for_date(TAB_BODY, day_iso)
-    kg = None
+    seen: set[tuple[str, float]] = set()
+    kg: float | None = None
     for r in rows:
+        src = (r.get("Source(s)") or "").strip()
         for k, v in r.items():
             if not k:
                 continue
             key = k.lower()
             if "weight" in key and "kg" in key:
                 n = _fnum(v)
-                if n is not None:
-                    kg = n
+                if n is None:
+                    continue
+                sig = (src, round(n, 4))
+                if sig in seen:
+                    continue
+                seen.add(sig)
+                kg = n
     if kg is None:
         return None
     return round(kg * 2.20462, 2)
 
 
 def get_sleep_hours(day_iso: str) -> float | None:
-    """Total sleep hours for the night ending on this date. The Sleep tab
-    stores per-night rows with light/deep/REM/awake minutes and start/end
-    timestamps. Prefer End - Start when present; otherwise sum light+deep+REM."""
+    """Total sleep hours for the night ending on this date. Sleep rows
+    dedupe on (source, Start Time, End Time) so a re-synced night doesn't
+    double-count; a same-night row from a second source with the same
+    start/end is also treated as a duplicate rather than added."""
     rows = _rows_for_date(TAB_SLEEP, day_iso)
     total_min = 0.0
+    seen: set[tuple[str, str]] = set()
     for r in rows:
-        start = _parse_dt(r.get("Start Time"))
-        end = _parse_dt(r.get("End Time"))
+        start_raw = (r.get("Start Time") or "").strip()
+        end_raw = (r.get("End Time") or "").strip()
+        key = (start_raw, end_raw)
+        if key != ("", "") and key in seen:
+            continue
+        if key != ("", ""):
+            seen.add(key)
+
+        start = _parse_dt(start_raw)
+        end = _parse_dt(end_raw)
         if start and end and end > start:
             total_min += (end - start).total_seconds() / 60
             continue
@@ -177,51 +242,45 @@ def get_sleep_hours(day_iso: str) -> float | None:
 
 
 def get_hydration_ml(day_iso: str) -> float | None:
-    """Total hydration in ml for the day."""
+    """Total hydration in ml for the day. Max within a source (idempotent
+    against re-syncs of the same daily total), summed across sources."""
     rows = _rows_for_date(TAB_NUTRITION, day_iso)
-    total = 0.0
-    for r in rows:
-        v = _fnum(r.get("Hydration (ml)"))
-        if v is not None:
-            total += v
+    per_source = _max_per_source(rows, "Hydration (ml)")
+    total = sum(per_source.values())
     return round(total, 1) if total > 0 else None
 
 
 def get_meditation_min(day_iso: str) -> float:
-    """Total meditation minutes on the day (0 if none). Sourced from Activity
-    rows whose Exercise Name looks like meditation/mindfulness."""
+    """Total meditation minutes on the day. Same session dedup as workouts:
+    (source, start-timestamp, exercise-name)."""
     rows = _rows_for_date(TAB_ACTIVITY, day_iso)
     total = 0.0
+    seen: set[tuple[str, str, str]] = set()
     for r in rows:
-        name = r.get("Exercise Name") or ""
-        if not name.strip():
+        name = (r.get("Exercise Name") or "").strip()
+        if not name or _classify(name) != "meditation":
             continue
-        if _classify(name) == "meditation":
-            total += _fnum(r.get("Duration (min)")) or 0
+        start = (r.get("Start Date/Time") or "").strip()
+        src = _source_hint(r.get("Source(s)") or "", name)
+        key = (src, start, name)
+        if key in seen:
+            continue
+        seen.add(key)
+        total += _fnum(r.get("Duration (min)")) or 0
     return round(total, 1)
 
 
 def get_nutrition(day_iso: str) -> dict:
-    """Sum calories, protein, and carbs across the day's nutrition rows.
-    Returns {calories, protein_g, carbs_g}, each None if never reported."""
+    """Calories, protein, and carbs for the day. Max per source per column
+    (idempotent under re-sync of the daily aggregate), summed across sources."""
     rows = _rows_for_date(TAB_NUTRITION, day_iso)
-    calories = None
-    protein = None
-    carbs = None
-    for r in rows:
-        c = _fnum(r.get("Nutrition calories (kcal)"))
-        p = _fnum(r.get("Protein (g)"))
-        cb = _fnum(r.get("Carbs (g)"))
-        if c is not None:
-            calories = (calories or 0) + c
-        if p is not None:
-            protein = (protein or 0) + p
-        if cb is not None:
-            carbs = (carbs or 0) + cb
+    cals = _max_per_source(rows, "Nutrition calories (kcal)")
+    prot = _max_per_source(rows, "Protein (g)")
+    carbs = _max_per_source(rows, "Carbs (g)")
     return {
-        "calories": round(calories) if calories is not None else None,
-        "protein_g": round(protein, 1) if protein is not None else None,
-        "carbs_g": round(carbs, 1) if carbs is not None else None,
+        "calories": round(sum(cals.values())) if cals else None,
+        "protein_g": round(sum(prot.values()), 1) if prot else None,
+        "carbs_g": round(sum(carbs.values()), 1) if carbs else None,
     }
 
 
