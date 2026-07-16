@@ -171,15 +171,10 @@ def build_payload() -> dict:
         for w in workouts if w["type"] == "run"
     ][-20:]
 
-    # Last briefing
-    last_briefing_resp = (
-        db.db().table("briefings")
-        .select("date,kind,content")
-        .order("created_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-    last_briefing = (last_briefing_resp.data or [None])[0]
+    # Recent briefings — the dashboard renders the most recent expanded and
+    # the rest as a collapsed archive.
+    briefings = db.get_recent_briefings(limit=30)
+    last_briefing = briefings[0] if briefings else None
 
     return {
         "generated_at": today_iso,
@@ -196,6 +191,7 @@ def build_payload() -> dict:
         "streaks": compute_streaks(daily),
         "targets": {k: v["value"] for k, v in targets.items()},
         "last_briefing": last_briefing,
+        "briefings": briefings,
     }
 
 

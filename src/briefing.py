@@ -7,7 +7,7 @@ from pathlib import Path
 from anthropic import Anthropic
 
 from . import db, config
-from .gmail_send import send
+from .emailer import send
 
 
 def load_skill() -> str:
@@ -49,7 +49,8 @@ def build_footer(today: str) -> str:
     return (
         f'<p style="margin-top:24px;font-size:13px;color:#888">'
         f'Hydration + meditation are pulled automatically from the Health Connect export sheet. '
-        f'<a href="{config.DASHBOARD_URL}" style="color:#888">Full dashboard</a>'
+        f'This briefing is also published at '
+        f'<a href="{config.DASHBOARD_URL}#briefing" style="color:#888">{config.DASHBOARD_URL}</a>.'
         f'</p>'
     )
 

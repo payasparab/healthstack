@@ -17,11 +17,11 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       HEALTHSTACK_SHEET_ID: ${{ secrets.HEALTHSTACK_SHEET_ID }}
-      GOOGLE_OAUTH_TOKEN: ${{ secrets.GOOGLE_OAUTH_TOKEN }}
       HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      GMAIL_TO: ${{ secrets.GMAIL_TO }}
-      GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
+      SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
       TIMEZONE: America/Los_Angeles
     steps:
       - uses: actions/checkout@v4

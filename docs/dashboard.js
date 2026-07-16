@@ -363,17 +363,57 @@ function renderRuns(data) {
   }).join('');
 }
 
+function renderBriefingBody(md) {
+  // Very light markdown → HTML: headers, bold, line breaks.
+  const esc = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return esc
+    .replace(/^### (.*)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.*)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.*)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^/, '<p>').replace(/$/, '</p>');
+}
+
 function renderBriefing(data) {
-  const b = data.last_briefing;
-  const dateEl = document.getElementById('briefing-date');
-  const contentEl = document.getElementById('briefing-content');
-  if (b) {
-    dateEl.textContent = `— ${b.date} (${b.kind})`;
-    contentEl.textContent = b.content;
-  } else {
-    dateEl.textContent = '— none yet';
-    contentEl.textContent = 'No briefings have been generated yet.';
+  const latestEl = document.getElementById('briefing-latest');
+  const archiveEl = document.getElementById('briefing-archive');
+  const briefings = data.briefings || (data.last_briefing ? [data.last_briefing] : []);
+
+  if (!briefings.length) {
+    latestEl.innerHTML = '<div class="meta">No briefings have been generated yet.</div>';
+    archiveEl.innerHTML = '';
+    return;
   }
+
+  const [latest, ...rest] = briefings;
+  latestEl.innerHTML = `
+    <div class="briefing-card current">
+      <div class="briefing-meta">${latest.date} · ${latest.kind}</div>
+      <div class="briefing-content">${renderBriefingBody(latest.content || '')}</div>
+    </div>
+  `;
+
+  if (!rest.length) {
+    archiveEl.innerHTML = '';
+    return;
+  }
+
+  archiveEl.innerHTML = `
+    <details class="briefing-archive-details">
+      <summary class="section-eyebrow">Archive (${rest.length})</summary>
+      <div class="briefing-archive-list">
+        ${rest.map((b, i) => `
+          <details class="briefing-card">
+            <summary><span class="briefing-meta">${b.date} · ${b.kind}</span></summary>
+            <div class="briefing-content">${renderBriefingBody(b.content || '')}</div>
+          </details>
+        `).join('')}
+      </div>
+    </details>
+  `;
 }
 
 main().catch(err => {

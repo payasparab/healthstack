@@ -36,16 +36,15 @@ The ingest pulls daily numbers from a sheet that Google Health / Health Connect 
 
 Column names are the Health Connect defaults — the ingest keys on `Date`, `Steps`, `Hydration (ml)`, `Nutrition calories (kcal)`, `Protein (g)`, `Carbs (g)`, `Start Time`/`End Time`/`Light/Deep/REM Sleep (min)`, `Start Date/Time`/`Exercise Name`/`Duration (min)`, and a `Weight (kg)` column on the Body tab.
 
-### 3. Gmail (for the daily briefing email)
-- Google Cloud Console → enable the **Gmail API** on your project.
-- OAuth consent screen → add scope `https://www.googleapis.com/auth/gmail.send`.
-- Credentials page → download the OAuth client JSON. Save it locally as `credentials.json` (do NOT commit).
-- Run once on your laptop:
-  ```
-  pip install -r requirements.txt
-  python scripts/first_time_oauth.py
-  ```
-  A browser will open. Approve the gmail.send scope. This creates `token.json` locally with a refresh token — paste its contents into GitHub Secret `GOOGLE_OAUTH_TOKEN`.
+### 3. SendGrid (for the daily briefing email)
+The briefing is emailed via SendGrid — no Gmail OAuth, no access to your mailbox, just an API key.
+
+1. sendgrid.com → free account (100 emails/day free forever, plenty for a daily briefing).
+2. Settings → **Sender Authentication** → **Verify a Single Sender** with the email address you want to send *from*. Confirm the verification email SendGrid sends you.
+3. Settings → **API Keys** → **Create API Key** → "Restricted access" with just **Mail Send** on. Copy the key (it's shown once).
+4. That key is the value for the `SENDGRID_API_KEY` GitHub secret. Your verified sender goes into `EMAIL_FROM`; wherever the briefing should arrive goes into `EMAIL_TO`.
+
+The full briefing is also published on the dashboard (see step 7), so email is really just a notification you can also open on your phone.
 
 ### 4. Hevy
 - hevy.com/settings?developer → copy API key → set as GH secret `HEVY_API_KEY`.
@@ -64,11 +63,11 @@ Repo → Settings → Secrets and variables → Actions:
 | `SUPABASE_URL` | from step 1 |
 | `SUPABASE_KEY` | service_role key from step 1 |
 | `HEALTHSTACK_SHEET_ID` | sheet id (or full URL) from step 2 |
-| `GOOGLE_OAUTH_TOKEN` | full contents of `token.json` from step 3 |
+| `SENDGRID_API_KEY` | Mail Send API key from step 3 |
+| `EMAIL_TO` | inbox that receives the briefing |
+| `EMAIL_FROM` | verified sender from step 3 (may be the same address) |
 | `HEVY_API_KEY` | from step 4 |
 | `ANTHROPIC_API_KEY` | from console.anthropic.com |
-| `GMAIL_TO` | your email address (where briefings arrive) |
-| `GMAIL_FROM` | the Gmail you OAuth'd (usually the same) |
 
 ### 7. GitHub Pages (dashboard)
 - Repo → Settings → Pages → Source: **Deploy from a branch**
@@ -89,7 +88,8 @@ Then Actions tab → enable workflows. First run will happen at the next schedul
 Every morning ~6 AM PT:
 1. `ingest.py` reads yesterday's numbers from the Health Connect sheet and Hevy, upserts into Supabase.
 2. `briefing.py` reads the last 14 days from Supabase, sends it to Claude with `SKILL.md` as system prompt, and Claude generates a briefing.
-3. Briefing arrives in your inbox with a link to the dashboard.
+3. `export_dashboard.py` writes `docs/data.json` (metrics + the last 30 briefings) and the workflow commits it — the dashboard picks up the changes on the next Pages build.
+4. The briefing is emailed via SendGrid and also published at `<dashboard-url>#briefing`.
 
 ## Interactive mode
 
@@ -103,15 +103,14 @@ Claude reads the skill, connects to Supabase (via MCP or direct), queries live d
 - `db/schema.sql` — Postgres tables
 - `db/seed_targets.sql` — your fixed targets + weight schedule
 - `src/ingest.py` — pulls from all sources, upserts to Supabase
-- `src/briefing.py` — generates daily briefing via Claude API + Gmail
+- `src/briefing.py` — generates daily briefing via Claude API
 - `src/weekly_review.py` — Sunday review
-- `src/export_dashboard.py` — writes docs/data.json for the dashboard
+- `src/export_dashboard.py` — writes docs/data.json (metrics + last 30 briefings)
 - `src/sources/google_sheet.py` — Health Connect export sheet reader (CSV over HTTPS, no OAuth)
 - `src/sources/hevy.py` — Hevy API wrapper
 - `src/db.py` — Supabase client
-- `src/gmail_send.py` — Gmail sender (only remaining Google OAuth surface)
+- `src/emailer.py` — SendGrid REST client
 - `src/config.py` — env vars
-- `scripts/first_time_oauth.py` — one-time Gmail OAuth flow
 - `skill/SKILL.md` — the Claude Skill
 - `docs/` — GitHub Pages dashboard (auto-published)
 

@@ -65,3 +65,16 @@ def save_briefing(date: str, kind: str, content: str, input_summary: dict) -> No
     db().table("briefings").insert({
         "date": date, "kind": kind, "content": content, "input_summary": input_summary
     }).execute()
+
+
+def get_recent_briefings(limit: int = 30) -> list[dict]:
+    """Most-recent-first list of the last N briefings. Used to publish the
+    archive to the GitHub Pages dashboard."""
+    resp = (
+        db().table("briefings")
+        .select("date,kind,content,created_at")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return resp.data or []

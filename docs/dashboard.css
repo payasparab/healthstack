@@ -419,30 +419,74 @@ html, body {
 .runs-table tr:last-child td { border-bottom: none; }
 
 /* ── briefing ────────────────────────────────── */
-.briefing-section { margin-bottom: 48px; }
-.briefing-section details { background: var(--surface); padding: 20px 24px; }
-.briefing-section summary {
+.briefing-section { margin-bottom: 48px; scroll-margin-top: 16px; }
+
+.briefing-card {
+  background: var(--surface);
+  padding: 20px 24px;
+  margin-bottom: 12px;
+}
+.briefing-card.current { border-left: 2px solid var(--text); }
+
+.briefing-meta {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.briefing-content {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+}
+.briefing-content p { margin: 0 0 12px; }
+.briefing-content p:last-child { margin-bottom: 0; }
+.briefing-content h3,
+.briefing-content h4 {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 16px 0 8px;
+}
+
+.briefing-archive { margin-top: 20px; }
+.briefing-archive-details > summary {
   cursor: pointer;
   list-style: none;
   outline: none;
+  color: var(--muted);
+  padding: 4px 0 12px;
 }
-.briefing-section summary::-webkit-details-marker { display: none; }
-.briefing-section summary::before {
+.briefing-archive-details > summary::-webkit-details-marker { display: none; }
+.briefing-archive-details > summary::before {
   content: "▸ ";
   color: var(--muted);
   font-family: var(--mono);
   margin-right: 4px;
 }
-.briefing-section details[open] summary::before { content: "▾ "; }
-.briefing-content {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--rule);
-  font-size: 14px;
-  white-space: pre-wrap;
-  color: var(--text);
-  line-height: 1.6;
+.briefing-archive-details[open] > summary::before { content: "▾ "; }
+
+.briefing-archive-list .briefing-card summary {
+  cursor: pointer;
+  list-style: none;
+  outline: none;
 }
+.briefing-archive-list .briefing-card summary::-webkit-details-marker { display: none; }
+.briefing-archive-list .briefing-card summary::before {
+  content: "▸ ";
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-right: 4px;
+}
+.briefing-archive-list .briefing-card[open] summary::before { content: "▾ "; }
 
 /* ── footer ──────────────────────────────────── */
 .footer {
