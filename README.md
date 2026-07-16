@@ -69,11 +69,25 @@ Repo → Settings → Secrets and variables → Actions:
 | `HEVY_API_KEY` | from step 4 |
 | `ANTHROPIC_API_KEY` | from console.anthropic.com |
 
-### 7. GitHub Pages (dashboard)
-- Repo → Settings → Pages → Source: **Deploy from a branch**
-- Branch: **main**, Folder: **/docs**
-- Save. Your dashboard will be at `https://payasparab.github.io/healthstack/`.
-- First view will show empty state until the first daily cron populates `docs/data.json`.
+### 7. Dedicated dashboard repo (GitHub Pages)
+The dashboard is published to a **separate repo** so it stays isolated from any other Pages site you have. The daily workflow pushes the built site (HTML + CSS + JS + `data.json`) into it.
+
+1. Create a new empty public repo, e.g. `payasparab/healthstack-dashboard`.
+2. On that new repo: Settings → **Pages** → Source: **Deploy from a branch** → Branch: **main**, Folder: **/ (root)** → Save.
+   Site URL: `https://payasparab.github.io/healthstack-dashboard/`.
+3. Create a **Fine-grained personal access token** at github.com/settings/personal-access-tokens/new:
+   - Repository access: **Only select repositories** → your dashboard repo.
+   - Permissions: **Contents → Read and write**.
+   - Copy the token.
+4. Back on the `healthstack` repo, add these secrets:
+
+   | Name | Value |
+   |---|---|
+   | `DASHBOARD_REPO` | `payasparab/healthstack-dashboard` |
+   | `DASHBOARD_PAT` | the fine-grained token from step 3 |
+   | `DASHBOARD_URL` | `https://payasparab.github.io/healthstack-dashboard/` (used in the briefing email footer) |
+
+The workflow's "Publish dashboard" step is a no-op if `DASHBOARD_REPO` / `DASHBOARD_PAT` are unset, so you can leave those blank while iterating locally. First visit will show an empty state until the first daily cron pushes `data.json`.
 
 ### 8. Push and enable
 ```
@@ -88,8 +102,8 @@ Then Actions tab → enable workflows. First run will happen at the next schedul
 Every morning ~6 AM PT:
 1. `ingest.py` reads yesterday's numbers from the Health Connect sheet and Hevy, upserts into Supabase.
 2. `briefing.py` reads the last 14 days from Supabase, sends it to Claude with `SKILL.md` as system prompt, and Claude generates a briefing.
-3. `export_dashboard.py` writes `docs/data.json` (metrics + the last 30 briefings) and the workflow commits it — the dashboard picks up the changes on the next Pages build.
-4. The briefing is emailed via SendGrid and also published at `<dashboard-url>#briefing`.
+3. `export_dashboard.py` writes `docs/data.json` (metrics + the last 30 briefings). The workflow bundles the dashboard files with the fresh `data.json` and pushes them to the dashboard repo, which serves via GitHub Pages.
+4. The briefing is emailed via SendGrid and also published at `<DASHBOARD_URL>#briefing`.
 
 ## Interactive mode
 

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # needed to push docs/data.json back to the repo
+  contents: read  # dashboard is pushed to a separate repo, not committed here
 
 jobs:
   ingest_brief_publish:
@@ -23,6 +23,7 @@ jobs:
       SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
       EMAIL_TO: ${{ secrets.EMAIL_TO }}
       EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
       TIMEZONE: America/Los_Angeles
     steps:
       - uses: actions/checkout@v4
@@ -41,14 +42,36 @@ jobs:
       - name: Export dashboard data
         run: python -m src.export_dashboard
 
-      - name: Commit dashboard data
+      - name: Publish dashboard to separate Pages repo
+        env:
+          DASHBOARD_REPO: ${{ secrets.DASHBOARD_REPO }}   # e.g. payasparab/healthstack-dashboard
+          DASHBOARD_PAT:  ${{ secrets.DASHBOARD_PAT }}    # PAT with contents:write on the dashboard repo
         run: |
+          set -euo pipefail
+          if [ -z "${DASHBOARD_REPO:-}" ] || [ -z "${DASHBOARD_PAT:-}" ]; then
+            echo "DASHBOARD_REPO / DASHBOARD_PAT not set; skipping publish."
+            exit 0
+          fi
+
+          # Clone the target repo into a workspace so we preserve its history.
+          git clone --depth 1 \
+            "https://x-access-token:${DASHBOARD_PAT}@github.com/${DASHBOARD_REPO}.git" \
+            dashboard-repo
+          cd dashboard-repo
+
+          # Overwrite the site tree from the source docs/ folder + freshly
+          # generated data.json. Anything else (LICENSE, README) is left alone.
+          for f in index.html dashboard.css dashboard.js data.json .nojekyll; do
+            src="../docs/$f"
+            [ -f "$src" ] && cp "$src" "./$f"
+          done
+
           git config user.name  "healthstack-bot"
           git config user.email "healthstack-bot@users.noreply.github.com"
-          git add docs/data.json
+          git add index.html dashboard.css dashboard.js data.json .nojekyll
           if git diff --cached --quiet; then
-            echo "No dashboard changes"
+            echo "No dashboard changes to publish."
           else
             git commit -m "dashboard: data for $(date -u +%Y-%m-%d)"
-            git push
+            git push origin HEAD
           fi

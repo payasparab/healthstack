@@ -39,5 +39,7 @@ EMAIL_FROM = os.environ.get("EMAIL_FROM") or os.environ.get("GMAIL_FROM") or EMA
 # Timezone
 TIMEZONE = os.environ.get("TIMEZONE", "America/Los_Angeles")
 
-# Dashboard URL (published GitHub Pages)
-DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "https://payasparab.github.io/healthstack/")
+# Dashboard URL — set the DASHBOARD_URL secret to whatever your dedicated
+# dashboard repo publishes to (e.g. https://<user>.github.io/healthstack-dashboard/).
+# The default here is only a placeholder for local runs.
+DASHBOARD_URL = os.environ.get("DASHBOARD_URL", "https://payasparab.github.io/healthstack-dashboard/")
